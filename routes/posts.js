@@ -1,28 +1,68 @@
 const express = require("express")
+const multer = require("multer");
 const Post = require("../models/post")
 
 const router = express.Router();
 
-router.post("", (req, resp, next) => {
+const MIME_TYPE_MAP = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg'
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, callback) => {
+    const isValid = MIME_TYPE_MAP[file.mimetype];
+    let error = new Error("Invalid mime type");
+    if (isValid) {  
+      error = null;
+    }
+    callback(error, "images");
+  },
+  filename: (req, file, callback) => {
+    const name = file.originalname.toLowerCase().split(' ').join('-');
+    const ext = MIME_TYPE_MAP[file.mimetype];
+    callback(null, name + '-' + Date.now() + '.' + ext)
+  }
+});
+
+router.post("", multer({storage: storage}).single("image"), (req, resp, next) => {
+  const url = req.protocol + '://' + req.get("host");
   const post = new Post({
     title: req.body.title,
     content: req.body.content,
+    imagePath: url + "/images/" + req.file.filename
   });
   post.save().then((savedPost) => {
     console.log(savedPost);
     resp.status(201).json({
       message: "Post added successfully",
-      postId: savedPost._id,
+      post: {
+        ...savedPost,
+        id: savedPost._id,
+      }
+      // post: {
+      //   id: savedPost._id,
+      //   title: savedPost.title,
+      //   content: savedPost.content,
+      //   imagePath: savedPost.imagePath
+      // }
     });
   });
 });
 
-router.put("/:id", (req, resp, next) => {
+router.put("/:id",  multer({storage: storage}).single("image"), (req, resp, next) => {
+  let imagePath;
+  if (req.file) {
+    const url = req.protocol + '://' + req.get("host");
+    imagePath = url + "/images/" + req.file.filename
+  }
   Post.updateOne(
     { _id: req.params.id }, 
     { 
       title: req.body.title,
-      content: req.body.content
+      content: req.body.content,
+      imagePath: imagePath
     })
       .then((savedPost) => {
         console.log(savedPost);
@@ -36,7 +76,6 @@ router.put("/:id", (req, resp, next) => {
         resp.status(500).json({ message: 'Update failed', error: err });
     });
 });
-
 
 router.get("", (req, resp, next) => {
   Post.find().then((documents) => {
