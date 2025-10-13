@@ -4,9 +4,10 @@ const mongoose = require("mongoose");
 const path = require("path");
 
 const postsRoutes = require("./routes/posts");
+const authRoutes = require("./routes/auth")
 
 mongoose
-  .connect("mongodb://localhost:27017/mean_course")
+  .connect("mongodb://localhost:27017/mean_demo")
   .then(() => {
     console.log("Connected to database!");
   })
@@ -17,7 +18,7 @@ mongoose
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false  }));
-app.use("/images", express.static("images")); //express.static(path.join("somepath/images"))
+app.use("/images", express.static("images"));
 
 app.use((req, resp, next) => {
   resp.setHeader("Access-Control-Allow-Origin", "*");
@@ -33,5 +34,6 @@ app.use((req, resp, next) => {
 });
 
 app.use("/api/posts", postsRoutes);
+app.use("/api/auth", authRoutes);
 
 module.exports = app;
