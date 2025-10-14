@@ -23,7 +23,7 @@ router.post('/signup', (req, resp, next) => {
         });
       })
       .catch((err) => {
-        console.log(err);
+        console.error(err);
         resp.status(500).json({
           error: err,
         });
@@ -60,10 +60,11 @@ router.post('/login', (req, resp, next) => {
       resp.status(200).json({
         token: token,
         expiresIn: EXPIRES_IN_INT,
+        userId: userData._id,
       });
     })
     .catch((err) => {
-      console.log(err);
+      console.error(err);
       return resp.status(401).json({
         message: 'Authentication failed: ' + err,
       });
