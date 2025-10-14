@@ -33,6 +33,11 @@ router.post(
   CheckAuth,
   multer({ storage: storage }).single('image'),
   (req, resp, next) => {
+    if (!req.userData || !req.userData.userId) {
+      return resp
+        .status(401)
+        .json({ message: 'Authentication failed on UserId' });
+    }
     const url = req.protocol + '://' + req.get('host');
     const post = new Post({
       title: req.body.title,
@@ -41,19 +46,12 @@ router.post(
       creator: req.userData.userId,
     });
     post.save().then((savedPost) => {
-      console.log(savedPost);
       resp.status(201).json({
         message: 'Post added successfully',
         post: {
           ...savedPost,
           id: savedPost._id,
         },
-        // post: {
-        //   id: savedPost._id,
-        //   title: savedPost.title,
-        //   content: savedPost.content,
-        //   imagePath: savedPost.imagePath
-        // }
       });
     });
   }
@@ -70,19 +68,25 @@ router.put(
       imagePath = url + '/images/' + req.file.filename;
     }
     Post.updateOne(
-      { _id: req.params.id },
+      { _id: req.params.id, creator: req.userData.userId },
       {
         title: req.body.title,
         content: req.body.content,
         imagePath: imagePath,
+        creator: req.userData.userId,
       }
     )
       .then((savedPost) => {
-        console.log(savedPost);
-        resp.status(200).json({
-          message: 'Post updated successfully',
-          postId: savedPost._id,
-        });
+        if (savedPost.modifiedCount > 0) {
+          resp.status(200).json({
+            message: 'Post updated successfully',
+            postId: savedPost._id,
+          });
+        } else {
+          resp.status(401).json({
+            message: 'Unauthorized!',
+          });
+        }
       })
       .catch((err) => {
         console.error('Update error:', err);
@@ -99,19 +103,15 @@ router.get('', (req, resp, next) => {
   if (pageSize) {
     if (currentPage > 0) {
       postQuery.skip(pageSize * (currentPage - 1));
-      console.log('skip: ' + pageSize * (currentPage - 1));
     }
     postQuery.limit(pageSize);
-    console.log('pageSize: ' + pageSize);
   }
-  console.log(req.query);
   postQuery
     .then((documents) => {
       fetchedPosts = documents;
       return Post.countDocuments();
     })
     .then((count) => {
-      console.log(fetchedPosts);
       resp.status(200).json({
         message: 'Posts fetched successfully',
         posts: fetchedPosts,
@@ -123,7 +123,6 @@ router.get('', (req, resp, next) => {
 router.get('/:id', (req, resp, next) => {
   Post.findById(req.params.id).then((post) => {
     if (post) {
-      console.log(post);
       resp.status(200).json({
         message: 'Post fetched successfully',
         post: post,
@@ -135,11 +134,15 @@ router.get('/:id', (req, resp, next) => {
 });
 
 router.delete('/:id', CheckAuth, (req, resp, next) => {
-  console.log('Post to be deleted: ' + req.params.id);
-  Post.deleteOne({ _id: req.params.id }).then((result) => {
-    console.log(result);
-    resp.status(200).json({ message: 'Post deleted!' });
-  });
+  Post.deleteOne({ _id: req.params.id, creator: req.userData.userId }).then(
+    (result) => {
+      if (result.deletedCount > 0) {
+        resp.status(200).json({ message: 'Post deleted!' });
+      } else {
+        resp.status(401).json({ message: 'Unauthorized!' });
+      }
+    }
+  );
 });
 
 module.exports = router;
