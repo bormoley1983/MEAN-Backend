@@ -7,7 +7,7 @@ const postsRoutes = require('./routes/posts');
 const authRoutes = require('./routes/auth');
 
 mongoose
-  .connect('mongodb://localhost:27017/mean_demo')
+  .connect(process.env.MONGODB_CONN_STR)
   .then(() => {
     console.log('Connected to database!');
   })

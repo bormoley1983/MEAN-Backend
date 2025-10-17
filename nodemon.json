@@ -1,0 +1,8 @@
+{
+    "env": {
+        "NODE_ENV": "development",
+        "PORT": "3000",
+        "MONGODB_CONN_STR": "mongodb://localhost:27017/mean_demo",
+        "JWT_KEY": "secret_passspharse"
+    }
+}
